@@ -11,6 +11,9 @@
 #ifdef _DEBUGTIMINGS
 #include <chrono>
 #endif
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "OpenGLHelper.h"
 
@@ -132,6 +135,7 @@ struct ChangeResolutionCmd {
 // NOTE:	Both the below image asset methods use OpenGL 
 //			so they _must_ be called from the main thread
 void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* filename) {
+	std::cerr << "AssignByFilename" << std::endl;
 	int width;
 	int height;
 	int channels;
@@ -159,9 +163,14 @@ void SDHRManager::ImageAsset::AssignByFilename(SDHRManager* owner, const char* f
 }
 
 void SDHRManager::ImageAsset::AssignByMemory(SDHRManager* owner, const uint8_t* buffer, int size) {
+	std::cerr << "AssignByMemory" << std::endl;
 	int width = 0;
 	int height = 0;
 	int channels = 0;
+	int fd = open("dumpfile", O_CREAT | O_WRONLY);
+	std::cerr << "open dumpfile " << fd << std::endl;
+	write(fd,buffer,size);
+	close(fd);
 	unsigned char* data = stbi_load_from_memory(buffer, size, &width, &height, &channels, 4);
 	if (data == NULL) {
 		owner->CommandError(stbi_failure_reason());
