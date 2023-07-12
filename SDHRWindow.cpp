@@ -69,11 +69,8 @@ void SDHRWindow::SetSize(uXY _size)
 
 void SDHRWindow::Update()
 {
-	if (enabled)
-	{
-		if (mesh)
-			mesh->updateMesh();
-	}
+	if (mesh)
+		mesh->updateMesh();
 };
 
 // NOTE: This (and any methods with OpenGL calls) must be called from the main thread
@@ -85,8 +82,10 @@ void SDHRWindow::Render(const glm::mat4& mat_camera, const glm::mat4& mat_proj)
 			glm::vec2 window_topleft = glm::vec2(tile_begin.x, tile_begin.y);
 			glm::vec2 window_bottomright = window_topleft + glm::vec2(screen_count.x, screen_count.y);
 
+			mesh->SetupDraw();
 			mesh->shaderProgram->setVec2("windowTopLeft", window_topleft);
 			mesh->shaderProgram->setVec2("windowBottomRight", window_bottomright);
+			mesh->shaderProgram->setInt("anim_ms_frame", anim_ms_frame);
 
 			GLenum glerr;
 			if ((glerr = glGetError()) != GL_NO_ERROR) {
