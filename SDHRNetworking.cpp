@@ -290,7 +290,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
 				continue;
-			}
+			};
 
 			// bus event
 			uint8_t* p = RecvBuf + sizeof(SDHRPacketHeader);
@@ -429,7 +429,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
 				continue;
-			}
+			};
 			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
 			while (p - bufs[i] < msgs[i].msg_len) {
 				SDHRBusChunk* c = (SDHRBusChunk*)p;
