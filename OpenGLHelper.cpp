@@ -5,6 +5,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include "SDL_timer.h"
 
 
 // below because "The declaration of a static data member in its class definition is not a definition"
@@ -155,6 +156,7 @@ void OpenGLHelper::rescale_framebuffer(uint32_t width, uint32_t height)
 
 void OpenGLHelper::setup_render()
 {
+	frame_ticks = SDL_GetTicks();
 	GLenum glerr;
 	bind_framebuffer();
 	glClearColor(0.f, 0.f, 0.f, 1.0f);
@@ -187,6 +189,8 @@ void OpenGLHelper::setup_render()
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
+		camera.Zoom = 45.0f;
+		camera.updateCameraVectors();
 		mat_proj = glm::perspective<float>(glm::radians(this->camera.Zoom), (float)fb_width / fb_height, 0, 256);
 		bIsUsingPerspective = bUsePerspective;
 	}
@@ -194,10 +198,12 @@ void OpenGLHelper::setup_render()
 	{
 		camera.Position.x = fb_width / 2.f;
 		camera.Position.y = fb_height / 2.f;
-		camera.Position.z = _SDHR_MAX_WINDOWS;
+		camera.Position.z = _SDHR_MAX_WINDOWS - 1;
 		camera.Up = glm::vec3(0.f, 1.f, 0.f);
 		camera.Yaw = -90.f;
 		camera.Pitch = 0.f;
+		camera.Zoom = 45.0f;
+		camera.updateCameraVectors();
 		mat_proj = glm::ortho<float>(
 			-(float)fb_width / 2, (float)fb_width / 2,
 			-(float)fb_height / 2, (float)fb_height / 2,
@@ -233,4 +239,9 @@ void OpenGLHelper::get_framebuffer_size(uint32_t* width, uint32_t* height)
 {
 	*width = fb_width;
 	*height = fb_height;
+}
+
+uint32_t OpenGLHelper::get_frame_ticks()
+{
+	return frame_ticks;
 }
