@@ -284,8 +284,8 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				std::cerr << "machine reset" << std::endl;
 				//A2VideoManager::GetInstance()->ResetComputer();
 				continue;
-			case 3: // datetime request
-				// TODO
+			case 3: // datetime ack
+				std::cerr << "received datetime ack" << std::endl;
 				continue;
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
@@ -366,6 +366,12 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	uint32_t prev_seqno = 0;
 	uint16_t prev_addr = 0;
 	int64_t last_recv_nsec;
+	int64_t last_time_sent_nsec = 0;
+	struct sockaddr_in dest;
+	dest.sin_family = AF_INET;
+	dest.sin_addr.s_addr = inet_addr("192.168.1.177");
+	dest.sin_port = htons(8080);
+	uint32_t next_tx_seqno = 0;
 
 	while (!(*shouldTerminateNetworking)) {
 		struct timespec ts;
@@ -375,6 +381,23 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 		if (retval < 0 && errno != EWOULDBLOCK) {
 			std::cerr << "Error in recvmmsg" << std::endl;
 			return 1;
+		}
+		if (last_time_sent_nsec + 1000000000ll < nsec) {
+			last_time_sent_nsec = nsec;
+			uint8_t time_buf[256];
+			uint16_t millis = ts.tv_nsec / 1000000ll;
+			time_buf[0] = next_tx_seqno & 0xff;
+			time_buf[1] = (next_tx_seqno >> 8) & 0xff;
+			time_buf[2] = (next_tx_seqno >> 16) & 0xff;
+			time_buf[3] = (next_tx_seqno >> 24) & 0xff;
+			time_buf[4] = 3; // time command
+			time_buf[5] = ts.tv_sec & 0xff;
+			time_buf[6] = (ts.tv_sec >> 8) & 0xff;
+			time_buf[7] = (ts.tv_sec >> 16) & 0xff;
+			time_buf[8] = (ts.tv_sec >> 24) & 0xff;
+			time_buf[9] = millis & 0xff;
+			time_buf[10] = (millis >> 8) & 0xff;
+			sendto(sockfd, time_buf, 11, 0, (struct sockaddr*)&dest, sizeof(dest));
 		}
 		if (connected && nsec > last_recv_nsec + 10000000000ll) {
 			std::cout << "Client disconnected" << std::endl;
@@ -424,7 +447,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 				//A2VideoManager::GetInstance()->ResetComputer();
 				continue;
 			case 3: // datetime request
-				// TODO
+				//std::cerr << "time ack" << std::endl;
 				continue;
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
