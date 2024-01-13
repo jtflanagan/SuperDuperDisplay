@@ -103,7 +103,11 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-#if defined(IMGUI_IMPL_OPENGL_ES2)
+#if defined(__APPLE__)
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL
+        | SDL_WINDOW_RESIZABLE | SDL_WINDOW_MAXIMIZED
+        | SDL_WINDOW_SHOWN);
+#elif defined(IMGUI_IMPL_OPENGL_ES2)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_SHOWN);
 #else
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL 
@@ -409,6 +413,11 @@ int main(int, char**)
             }
 			margin.x = (_w - _newW) / 2;
 			margin.y = (_h - _newH) / 2;
+            ImGui::GetBackgroundDrawList()->AddRectFilled(
+                margin,
+                ImVec2(margin.x + _newW, margin.y + _newH),
+                a2VideoManager->color_background
+            );
 			ImGui::GetBackgroundDrawList()->AddImage(
 				(void*)glhelper->get_output_texture_id(),
 				margin,
