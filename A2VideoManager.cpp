@@ -352,6 +352,29 @@ void A2VideoManager::ProcessSoftSwitch(uint16_t addr, uint8_t val, uint8_t rw)
 	case 0xC05F:	// DRESOFF
 		a2SoftSwitches &= ~A2SS_DRES;
 		break;
+	case 0xC068:    // STATEREG
+		{
+			if (val & (1 << 0)) {
+				a2SoftSwitches |= A2SS_INTCXROM;
+			} else {
+				a2SoftSwitches &= ~A2SS_INTCXROM;
+			}
+			if (val & (1 << 4)) {
+				a2SoftSwitches |= A2SS_RAMWRT;
+			} else {
+				a2SoftSwitches &= ~A2SS_RAMWRT;
+			}
+			if (val & (1 << 5)) {
+				a2SoftSwitches |= A2SS_RAMRD;
+			} else {
+				a2SoftSwitches &= ~A2SS_RAMRD;
+			}
+			if (val & (1 << 6)) {
+				a2SoftSwitches |= A2SS_PAGE2;
+			} else {
+				a2SoftSwitches &= ~A2SS_PAGE2;
+			}
+		} break;
 	// $C022   R / W     SCREENCOLOR[IIgs] text foreground and background colors(also VidHD)
 	case 0xC022:	// Set border color on bits 3:0
 		color_foreground = gPaletteRGB[12 + (val & 0x0F)];

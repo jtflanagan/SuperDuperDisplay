@@ -40,6 +40,15 @@ struct SDHRBusChunk {
 	uint8_t data[8];
 	uint8_t addrs[16];
 };
+
+struct SDHRBusGsChunk {
+	uint8_t m2sel_flags;
+	uint8_t m2b0_flags;
+	uint8_t rwflags;
+	uint8_t seqflags;
+	uint8_t data[8];
+	uint8_t addrs[16];
+};
 #pragma pack(pop)
 
 struct SDHREvent {

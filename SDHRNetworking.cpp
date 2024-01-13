@@ -369,7 +369,7 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 	int64_t last_time_sent_nsec = 0;
 	struct sockaddr_in dest;
 	dest.sin_family = AF_INET;
-	dest.sin_addr.s_addr = inet_addr("192.168.1.177");
+	dest.sin_addr.s_addr = inet_addr("192.168.155.249");
 	dest.sin_port = htons(8080);
 	uint32_t next_tx_seqno = 0;
 
@@ -449,38 +449,82 @@ int socket_server_thread(uint16_t port, bool* shouldTerminateNetworking)
 			case 3: // datetime request
 				//std::cerr << "time ack" << std::endl;
 				continue;
+			case 4: // GS bus event
+				break;
 			default:
 				std::cerr << "ignoring cmd" << std::endl;
 				continue;
 			};
-			uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
-			while (p - bufs[i] < msgs[i].msg_len) {
-				SDHRBusChunk* c = (SDHRBusChunk*)p;
-				size_t chunk_len = 10;
-				uint32_t addr_count = 0;
-				for (int j = 0; j < 8; ++j) {
-					bool rw = (c->rwflags & (1 << j)) != 0;
-					uint16_t addr;
-					bool addr_flag = (c->seqflags & (1 << j)) != 0;
-					if (addr_flag) {
-						chunk_len += 2;
-						addr = c->addrs[addr_count * 2 + 1];
-						addr <<= 8;
-						addr += c->addrs[addr_count * 2];
-						++addr_count;
+			if (h->cmdtype == 0) {
+				uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
+				while (p - bufs[i] < msgs[i].msg_len) {
+					SDHRBusChunk* c = (SDHRBusChunk*)p;
+					size_t chunk_len = 10;
+					uint32_t addr_count = 0;
+					for (int j = 0; j < 8; ++j) {
+						bool rw = (c->rwflags & (1 << j)) != 0;
+						uint16_t addr;
+						bool addr_flag = (c->seqflags & (1 << j)) != 0;
+						if (addr_flag) {
+							chunk_len += 2;
+							addr = c->addrs[addr_count * 2 + 1];
+							addr <<= 8;
+							addr += c->addrs[addr_count * 2];
+							++addr_count;
+						}
+						else {
+							addr = ++prev_addr;
+						}
+						prev_addr = addr;
+						if (rw && ((addr & 0xF000) != 0xC000)) {
+							// ignoring all read events not softswitches
+							continue;
+						}
+						SDHREvent e(rw, addr, c->data[j]);
+						events.push(e);
 					}
-					else {
-						addr = ++prev_addr;
-					}
-					prev_addr = addr;
-					if (rw && ((addr & 0xF000) != 0xC000)) {
-						// ignoring all read events not softswitches
-						continue;
-					}
-					SDHREvent e(rw, addr, c->data[j]);
-					events.push(e);
+					p += chunk_len;
 				}
-				p += chunk_len;
+			} else if (h->cmdtype == 4) {
+				//std::cerr << "cmdtype 4" << std::endl;
+				uint8_t* p = bufs[i] + sizeof(SDHRPacketHeader);
+				while (p - bufs[i] < msgs[i].msg_len) {
+					SDHRBusGsChunk* c = (SDHRBusGsChunk*)p;
+					size_t chunk_len = 12;
+					uint32_t addr_count = 0;
+					for (int j = 0; j < 8; ++j) {
+						int flag_bit = 1 << j;
+						bool m2sel = (c->m2sel_flags & flag_bit) != 0;
+						//bool m2b0 = (c->m2b0_flags & flag_bit) != 0; 
+						bool rw = (c->rwflags & flag_bit) != 0;
+						uint16_t addr;
+						bool addr_flag = (c->seqflags & flag_bit) != 0;
+						if (addr_flag) {
+							chunk_len += 2;
+							addr = c->addrs[addr_count * 2 + 1];
+							addr <<= 8;
+							addr += c->addrs[addr_count * 2];
+							++addr_count;
+						}
+						else {
+							addr = ++prev_addr;
+						}
+						prev_addr = addr;
+						if (rw && ((addr & 0xF000) != 0xC000)) {
+							continue;
+						}
+						if (m2sel == 0) {
+							if (addr >= 0x400 &&
+							    addr < 0x800)	{
+								printf("%d %04x %02x\n",
+								       rw, addr, c->data[j]);
+							}
+							SDHREvent e(rw, addr, c->data[j]);
+							events.push(e);
+						}
+					}
+					p += chunk_len;
+				}
 			}
 		}
 	}
